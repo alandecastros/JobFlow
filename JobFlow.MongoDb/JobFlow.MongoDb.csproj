@@ -1,14 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <Authors>Alan Castro</Authors>
         <Description>Simple, unambitious job queue implementation using MongoDB as storage in .NET</Description>
-        <Copyright>Copyright Alan Castro</Copyright>
         <TargetFramework>net9.0</TargetFramework>
         <ImplicitUsings>disable</ImplicitUsings>
         <Nullable>enable</Nullable>
-        <Version>0.0.1-beta2</Version>
-        <TargetsForTfmSpecificBuildOutput>$(TargetsForTfmSpecificBuildOutput);CopyProjectReferencesToPackage</TargetsForTfmSpecificBuildOutput>
     </PropertyGroup>
 
     <ItemGroup>
@@ -20,15 +16,6 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\JobFlow.Core\JobFlow.Core.csproj">
-            <ReferenceOutputAssembly>true</ReferenceOutputAssembly>
-            <IncludeAssets>JobFlow.Core.dll</IncludeAssets>
-        </ProjectReference>
+        <ProjectReference Include="..\JobFlow.Core\JobFlow.Core.csproj" />
     </ItemGroup>
-
-    <Target DependsOnTargets="ResolveReferences" Name="CopyProjectReferencesToPackage">
-        <ItemGroup>
-            <BuildOutputInPackage Include="@(ReferenceCopyLocalPaths->WithMetadataValue('ReferenceSourceTarget', 'ProjectReference'))"/>
-        </ItemGroup>
-    </Target>
 </Project>
