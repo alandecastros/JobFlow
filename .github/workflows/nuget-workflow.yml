@@ -1,4 +1,4 @@
-﻿name: Build and Publish NuGet Packages
+﻿name: Build and Publish MongoDB NuGet Package
 
 on:
   workflow_dispatch:
