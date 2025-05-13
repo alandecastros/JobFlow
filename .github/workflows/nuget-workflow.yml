@@ -5,6 +5,7 @@ on:
 
 env:
   DOTNET_VERSION: '9.0.x'
+  PROJECT_PATH_CORE: 'JobFlow.Core/JobFlow.Core.csproj'
   PROJECT_PATH_MONGODB: 'JobFlow.MongoDb/JobFlow.MongoDb.csproj'
   OUTPUT_DIR: './packages'
   NUGET_SOURCE_URL: 'https://api.nuget.org/v3/index.json'
@@ -26,6 +27,15 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
+      - name: Restore dependencies for JobFlow.Core
+        run: dotnet restore ${{ env.PROJECT_PATH_CORE }}
+
+      - name: Build JobFlow.Core
+        run: dotnet build ${{ env.PROJECT_PATH_CORE }} --configuration Release --no-restore
+
+      - name: Pack JobFlow.Core
+        run: dotnet pack ${{ env.PROJECT_PATH_CORE }} --configuration Release --no-build -o ${{ env.OUTPUT_DIR }}      
+
       - name: Restore dependencies for JobFlow.MongoDb
         run: dotnet restore ${{ env.PROJECT_PATH_MONGODB }}
 
@@ -33,7 +43,7 @@ jobs:
         run: dotnet build ${{ env.PROJECT_PATH_MONGODB }} --configuration Release --no-restore
 
       - name: Pack JobFlow.MongoDb
-        run: dotnet pack ${{ env.PROJECT_PATH_MONGODB }} --configuration Release -o ${{ env.OUTPUT_DIR }}
+        run: dotnet pack ${{ env.PROJECT_PATH_MONGODB }} --configuration Release --no-build -o ${{ env.OUTPUT_DIR }}
 
-      - name: Publish JobFlow.MongoDb to NuGet.org
+      - name: Publish Nugets to NuGet.org
         run: dotnet nuget push "${{ env.OUTPUT_DIR }}/*.nupkg" --api-key ${{ secrets.NUGET_API_KEY }} --source ${{ env.NUGET_SOURCE_URL }} --skip-duplicate
