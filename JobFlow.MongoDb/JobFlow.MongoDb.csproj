@@ -8,6 +8,7 @@
         <ImplicitUsings>disable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <Version>0.0.1-beta1</Version>
+        <TargetsForTfmSpecificBuildOutput>$(TargetsForTfmSpecificBuildOutput);CopyProjectReferencesToPackage</TargetsForTfmSpecificBuildOutput>
     </PropertyGroup>
 
     <ItemGroup>
@@ -19,7 +20,15 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\JobFlow.Core\JobFlow.Core.csproj" />
+        <ProjectReference Include="..\JobFlow.Core\JobFlow.Core.csproj">
+            <ReferenceOutputAssembly>true</ReferenceOutputAssembly>
+            <IncludeAssets>JobFlow.Core.dll</IncludeAssets>
+        </ProjectReference>
     </ItemGroup>
 
+    <Target DependsOnTargets="ResolveReferences" Name="CopyProjectReferencesToPackage">
+        <ItemGroup>
+            <BuildOutputInPackage Include="@(ReferenceCopyLocalPaths->WithMetadataValue('ReferenceSourceTarget', 'ProjectReference'))"/>
+        </ItemGroup>
+    </Target>
 </Project>
