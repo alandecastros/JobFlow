@@ -33,7 +33,7 @@ jobs:
         run: dotnet build ${{ env.PROJECT_PATH_MONGODB }} --configuration Release --no-restore
 
       - name: Pack JobFlow.MongoDb
-        run: dotnet pack ${{ env.PROJECT_PATH_MONGODB }} --configuration Release --no-build -o ${{ env.OUTPUT_DIR }}
+        run: dotnet pack ${{ env.PROJECT_PATH_MONGODB }} --configuration Release -o ${{ env.OUTPUT_DIR }}
 
       - name: Publish JobFlow.MongoDb to NuGet.org
         run: dotnet nuget push "${{ env.OUTPUT_DIR }}/*.nupkg" --api-key ${{ secrets.NUGET_API_KEY }} --source ${{ env.NUGET_SOURCE_URL }} --skip-duplicate
