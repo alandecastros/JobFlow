@@ -1,0 +1,39 @@
+﻿name: Build and Publish NuGet Packages
+
+on:
+  workflow_dispatch:
+
+env:
+  DOTNET_VERSION: '9.0.x'
+  PROJECT_PATH_MONGODB: 'JobFlow.MongoDb/JobFlow.MongoDb.csproj'
+  OUTPUT_DIR: './packages'
+  NUGET_SOURCE_URL: 'https://api.nuget.org/v3/index.json'
+
+jobs:
+  build_and_pack_mongodb:
+    name: Build and Pack JobFlow.MongoDb
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read  # Required to checkout the repository
+      packages: write # Required to publish packages to GitHub Packages
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET ${{ env.DOTNET_VERSION }}
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore dependencies for JobFlow.MongoDb
+        run: dotnet restore ${{ env.PROJECT_PATH_MONGODB }}
+
+      - name: Build JobFlow.MongoDb
+        run: dotnet build ${{ env.PROJECT_PATH_MONGODB }} --configuration Release --no-restore
+
+      - name: Pack JobFlow.MongoDb
+        run: dotnet pack ${{ env.PROJECT_PATH_MONGODB }} --configuration Release --no-build -o ${{ env.OUTPUT_DIR }}
+
+      - name: Publish JobFlow.MongoDb to NuGet.org
+        run: dotnet nuget push "${{ env.OUTPUT_DIR }}/*.nupkg" --api-key ${{ secrets.NUGET_API_KEY }} --source ${{ env.NUGET_SOURCE_URL }} --skip-duplicate

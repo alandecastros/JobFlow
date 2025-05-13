@@ -1,0 +1,33 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "JobFlow.Core", "JobFlow.Core\JobFlow.Core.csproj", "{F62182C2-B6E7-4791-BE78-2663AB53D560}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "JobFlow.MongoDb", "JobFlow.MongoDb\JobFlow.MongoDb.csproj", "{1B284A82-7CD6-4073-AA66-0C2632ADC61E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "JobFlow.Postgres", "JobFlow.Postgres\JobFlow.Postgres.csproj", "{183B16F0-5103-473D-89C2-C98FBF62DA9B}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Github", "Github", "{86BD00BB-2AD1-4BAD-9FBA-A900755DD3EA}"
+	ProjectSection(SolutionItems) = preProject
+		.github\workflows\nuget-workflow.yml = .github\workflows\nuget-workflow.yml
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{F62182C2-B6E7-4791-BE78-2663AB53D560}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F62182C2-B6E7-4791-BE78-2663AB53D560}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F62182C2-B6E7-4791-BE78-2663AB53D560}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F62182C2-B6E7-4791-BE78-2663AB53D560}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1B284A82-7CD6-4073-AA66-0C2632ADC61E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1B284A82-7CD6-4073-AA66-0C2632ADC61E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1B284A82-7CD6-4073-AA66-0C2632ADC61E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1B284A82-7CD6-4073-AA66-0C2632ADC61E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{183B16F0-5103-473D-89C2-C98FBF62DA9B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{183B16F0-5103-473D-89C2-C98FBF62DA9B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{183B16F0-5103-473D-89C2-C98FBF62DA9B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{183B16F0-5103-473D-89C2-C98FBF62DA9B}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
