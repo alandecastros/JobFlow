@@ -1,6 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
+        <Authors>Alan Castro</Authors>
+        <Description>Simple, unambitious job queue implementation using MongoDB as storage in .NET</Description>
+        <Copyright>Copyright Alan Castro</Copyright>
         <TargetFramework>net9.0</TargetFramework>
         <ImplicitUsings>disable</ImplicitUsings>
         <Nullable>enable</Nullable>
