@@ -1,4 +1,4 @@
-﻿name: Build and Publish MongoDB NuGet Package
+﻿name: Build and Publish NuGet Packages
 
 on:
   workflow_dispatch:
@@ -12,8 +12,8 @@ env:
   NUGET_SOURCE_URL: 'https://api.nuget.org/v3/index.json'
 
 jobs:
-  build_and_pack_mongodb:
-    name: Build and Pack JobFlow
+  build_and_pack_packages:
+    name: Build and Pack Packages
     runs-on: ubuntu-latest
     permissions:
       contents: read  # Required to checkout the repository
