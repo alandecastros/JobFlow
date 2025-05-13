@@ -13,7 +13,7 @@ env:
 
 jobs:
   build_and_pack_mongodb:
-    name: Build and Pack JobFlow.MongoDb
+    name: Build and Pack JobFlow
     runs-on: ubuntu-latest
     permissions:
       contents: read  # Required to checkout the repository
