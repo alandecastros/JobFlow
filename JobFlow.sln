@@ -9,6 +9,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SolutionFiles", "SolutionFiles", "{68DC2073-607B-45BD-B1D0-F862711803FE}"
 	ProjectSection(SolutionItems) = preProject
 		Directory.Build.props = Directory.Build.props
+		.gitignore = .gitignore
 	EndProjectSection
 EndProject
 Global
@@ -29,5 +30,7 @@ Global
 		{183B16F0-5103-473D-89C2-C98FBF62DA9B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{183B16F0-5103-473D-89C2-C98FBF62DA9B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{183B16F0-5103-473D-89C2-C98FBF62DA9B}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
 	EndGlobalSection
 EndGlobal
