@@ -6,11 +6,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "JobFlow.MongoDb", "JobFlow.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "JobFlow.Postgres", "JobFlow.Postgres\JobFlow.Postgres.csproj", "{183B16F0-5103-473D-89C2-C98FBF62DA9B}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Github", "Github", "{86BD00BB-2AD1-4BAD-9FBA-A900755DD3EA}"
-	ProjectSection(SolutionItems) = preProject
-		.github\workflows\nuget-workflow.yml = .github\workflows\nuget-workflow.yml
-	EndProjectSection
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SolutionFiles", "SolutionFiles", "{68DC2073-607B-45BD-B1D0-F862711803FE}"
 	ProjectSection(SolutionItems) = preProject
 		Directory.Build.props = Directory.Build.props
