@@ -11,15 +11,16 @@ using UUIDNext;
 namespace JobFlow.Postgres;
 
 public class PostgresStorageService(
-    [FromKeyedServices("postgres-job-queue")] NpgsqlDataSource dataSource
+    [FromKeyedServices("postgres-job-queue")] NpgsqlDataSource dataSource,
+    PostgresOptions postgresOptions
 ) : IStorageService
 {
     public async Task<Job?> GetJobAsync(string jobId, CancellationToken cancellationToken = default)
     {
         var command = dataSource.CreateCommand(
-            """
+            $"""
             SELECT id, queue, status, payload, payload_type, results, created_at, updated_at, stopped_at
-            FROM job
+            FROM {postgresOptions.TableName}
             WHERE id = @jobId
             """
         );
@@ -77,7 +78,7 @@ public class PostgresStorageService(
         var payloadType = request.GetType().FullName!;
 
         await using var command = dataSource.CreateCommand(
-            "INSERT INTO job (id, status, queue, payload, payload_type, created_at, updated_at) VALUES (@id, 1, @queue, @payload, @payload_type, now(), now())"
+            $"INSERT INTO {postgresOptions.TableName} (id, status, queue, payload, payload_type, created_at, updated_at) VALUES (@id, 1, @queue, @payload, @payload_type, now(), now())"
         );
 
         command.Parameters.AddWithValue("id", jobId);
@@ -93,7 +94,7 @@ public class PostgresStorageService(
     public async Task StopJobAsync(string jobId, CancellationToken cancellationToken = default)
     {
         var command = dataSource.CreateCommand(
-            "UPDATE job SET status = 5, stopped_at = now(), updated_at = now() WHERE id = @id"
+            $"UPDATE {postgresOptions.TableName} SET status = 5, stopped_at = now(), updated_at = now() WHERE id = @id"
         );
         command.Parameters.AddWithValue("id", Guid.Parse(jobId));
         await command.ExecuteNonQueryAsync(cancellationToken);
@@ -105,7 +106,7 @@ public class PostgresStorageService(
     )
     {
         await using var cmdJobsPending = dataSource.CreateCommand(
-            "SELECT COUNT(1) from job WHERE status = 1 and queue = @queue"
+            $"SELECT COUNT(1) from {postgresOptions.TableName} WHERE status = 1 and queue = @queue"
         );
 
         cmdJobsPending.Parameters.AddWithValue("queue", queueName);
@@ -124,7 +125,7 @@ public class PostgresStorageService(
     )
     {
         await using var cmdJobsInProgress = dataSource.CreateCommand(
-            "SELECT COUNT(1) from job WHERE status = 2 and queue = @queue and worker_id = @workerId"
+            $"SELECT COUNT(1) from {postgresOptions.TableName} WHERE status = 2 and queue = @queue and worker_id = @workerId"
         );
 
         cmdJobsInProgress.Parameters.AddWithValue("queue", queueName);
@@ -144,17 +145,17 @@ public class PostgresStorageService(
     )
     {
         var command = dataSource.CreateCommand(
-            """
+            $"""
                 BEGIN;
                 WITH cte_job AS (
                     SELECT id
-                    FROM job
+                    FROM {postgresOptions.TableName}
                     WHERE status = 1 and queue = @queue
                     ORDER BY id
                     FOR UPDATE SKIP LOCKED
                     LIMIT 1
                 )
-                UPDATE job
+                UPDATE {postgresOptions.TableName}
                 SET status = 2,
                     worker_id = @workerId,
                     updated_at = now()
@@ -198,7 +199,7 @@ public class PostgresStorageService(
         var resultsInJson = JsonSerializerUtils.SerializeToDocument(resultDto);
 
         var command = dataSource.CreateCommand(
-            "UPDATE job SET status = 4, results = @results, updated_at = now() WHERE id = @id"
+            $"UPDATE {postgresOptions.TableName} SET status = 4, results = @results, updated_at = now() WHERE id = @id"
         );
         command.Parameters.AddWithValue("results", resultsInJson);
         command.Parameters.AddWithValue("id", Guid.Parse(jobId));
@@ -214,7 +215,7 @@ public class PostgresStorageService(
         var resultsInJson = JsonSerializerUtils.SerializeToDocument(resultDto);
 
         var command = dataSource.CreateCommand(
-            "UPDATE job SET status = 3, results = @results, updated_at = now() WHERE id = @id"
+            $"UPDATE {postgresOptions.TableName} SET status = 3, results = @results, updated_at = now() WHERE id = @id"
         );
         command.Parameters.AddWithValue("results", resultsInJson);
         command.Parameters.AddWithValue("id", Guid.Parse(jobId));
@@ -227,7 +228,7 @@ public class PostgresStorageService(
     )
     {
         var command = dataSource.CreateCommand(
-            "UPDATE job SET status = 1, worker_id = null, updated_at = now() WHERE id = @id"
+            $"UPDATE {postgresOptions.TableName} SET status = 1, worker_id = null, updated_at = now() WHERE id = @id"
         );
         command.Parameters.AddWithValue("id", Guid.Parse(jobId));
         await command.ExecuteNonQueryAsync(cancellationToken);
@@ -244,7 +245,7 @@ public class PostgresStorageService(
     )
     {
         var command = dataSource.CreateCommand(
-            "UPDATE job SET status = 1, worker_id = null, updated_at = now() WHERE worker_id = @workerId"
+            $"UPDATE {postgresOptions.TableName} SET status = 1, worker_id = null, updated_at = now() WHERE worker_id = @workerId"
         );
         command.Parameters.AddWithValue("workerId", workerId);
         await command.ExecuteNonQueryAsync(cancellationToken);
