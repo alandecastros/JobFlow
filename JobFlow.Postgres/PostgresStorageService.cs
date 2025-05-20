@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using JobFlow.Core.Abstractions;
@@ -13,6 +14,56 @@ public class PostgresStorageService(
     [FromKeyedServices("postgres-job-queue")] NpgsqlDataSource dataSource
 ) : IStorageService
 {
+    public async Task<Job?> GetJobAsync(string jobId, CancellationToken cancellationToken = default)
+    {
+        var command = dataSource.CreateCommand(
+            """
+            SELECT id, queue, status, payload, payload_type, results, created_at, updated_at, stopped_at
+            FROM job
+            WHERE id = @jobId
+            """
+        );
+
+        command.Parameters.AddWithValue("jobId", jobId);
+
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+
+        if (!await reader.ReadAsync(cancellationToken))
+        {
+            return null;
+        }
+
+        var id = reader.GetGuid(0);
+        var queue = reader.GetString(1);
+        var status = reader.GetInt32(2);
+        var payload = reader.GetString(3);
+        var payloadType = reader.GetString(4);
+        var results = reader.IsDBNull(5) ? null : reader.GetString(5);
+        var createdAt = reader.GetDateTime(6);
+        var updatedAt = reader.GetDateTime(7);
+        var stoppedAt = reader.IsDBNull(8) ? (DateTime?)null : reader.GetDateTime(8);
+
+        return new Job
+        {
+            Id = id.ToString(),
+            Queue = queue,
+            Status = status,
+            Payload = payload,
+            PayloadType = payloadType,
+            Results = results,
+            CreatedAt = createdAt,
+            UpdatedAt = updatedAt,
+            StoppedAt = stoppedAt,
+        };
+    }
+
+    public Task<IList<string>> GetRequestedToStopJobsIdsAsync(
+        CancellationToken cancellationToken = default
+    )
+    {
+        throw new NotImplementedException();
+    }
+
     public async Task<string> InsertAsync<T>(
         T request,
         string queue,
@@ -37,6 +88,15 @@ public class PostgresStorageService(
         await command.ExecuteNonQueryAsync(cancellationToken);
 
         return jobId.ToString();
+    }
+
+    public async Task StopJobAsync(string jobId, CancellationToken cancellationToken = default)
+    {
+        var command = dataSource.CreateCommand(
+            "UPDATE job SET status = 5, stopped_at = now(), updated_at = now() WHERE id = @id"
+        );
+        command.Parameters.AddWithValue("id", Guid.Parse(jobId));
+        await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
     public async Task<long> GetPendingCountAsync(
@@ -171,6 +231,11 @@ public class PostgresStorageService(
         );
         command.Parameters.AddWithValue("id", Guid.Parse(jobId));
         await command.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    public Task MarkJobAsStoppedById(string jobId, CancellationToken cancellationToken = default)
+    {
+        throw new NotImplementedException();
     }
 
     public async Task MarkWorkerProcessingJobsAsPending(

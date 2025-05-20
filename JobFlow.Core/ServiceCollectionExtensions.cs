@@ -44,8 +44,10 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<IChannelManager, ChannelManager>();
         services.AddSingleton<IJobHandlerCaller, JobHandlerCaller>();
+        services.AddSingleton<IJobCancellationTokenManager, JobCancellationTokenManager>();
 
         services.AddHostedService<JobPollingBackgroundService>();
+        services.AddHostedService<StopJobPollingBackgroundService>();
 
         var options = new JobFlowWorkerOptions(services);
 
@@ -77,6 +79,7 @@ public static class ServiceCollectionExtensions
                     assemblies,
                     serviceProvider: provider.GetRequiredService<IServiceProvider>(),
                     channelManager: provider.GetRequiredService<IChannelManager>(),
+                    jobCancellationTokenManager: provider.GetRequiredService<IJobCancellationTokenManager>(),
                     jobHandlerCaller: provider.GetRequiredService<IJobHandlerCaller>(),
                     logger: provider.GetRequiredService<ILogger<JobWorkerBackgroundService>>()
                 ));

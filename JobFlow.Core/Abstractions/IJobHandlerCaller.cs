@@ -8,7 +8,7 @@ public interface IJobHandlerCaller
 {
     Task<object?> CallHandler(
         Type messageType,
-        string payload,
+        object? payload,
         CancellationToken cancellationToken
     );
 }

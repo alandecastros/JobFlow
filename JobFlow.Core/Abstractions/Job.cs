@@ -14,4 +14,5 @@ public class Job
     public string? StackTrace { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime? StoppedAt { get; set; }
 }

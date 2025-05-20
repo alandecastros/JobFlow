@@ -25,5 +25,8 @@ public static class JobStatus
     /// </summary>
     public const int Failed = 4;
 
-    // Add other statuses here if needed (e.g., Retrying, Cancelled)
+    /// <summary>
+    /// Job processing stopped.
+    /// </summary>
+    public const int Stopped = 5;
 }

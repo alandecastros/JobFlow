@@ -1,18 +1,26 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using FluentResults;
 
 namespace JobFlow.Core.Abstractions;
 
 public interface IStorageService
 {
+    Task<Job?> GetJobAsync(string jobId, CancellationToken cancellationToken = default);
+
+    Task<IList<string>> GetRequestedToStopJobsIdsAsync(
+        CancellationToken cancellationToken = default
+    );
+
     Task<string> InsertAsync<T>(
         T request,
         string queue,
         CancellationToken cancellationToken = default
     )
         where T : notnull;
+
+    Task StopJobAsync(string jobId, CancellationToken cancellationToken = default);
 
     Task<long> GetPendingCountAsync(
         string queueName,
@@ -45,6 +53,8 @@ public interface IStorageService
     );
 
     Task MarkJobAsPendingById(string jobId, CancellationToken cancellationToken = default);
+
+    Task MarkJobAsStoppedById(string jobId, CancellationToken cancellationToken = default);
 
     Task MarkWorkerProcessingJobsAsPending(
         string workerId,

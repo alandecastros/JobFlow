@@ -12,18 +12,11 @@ public class JobHandlerCaller(IServiceProvider serviceProvider) : IJobHandlerCal
 {
     public async Task<object?> CallHandler(
         Type messageType,
-        string payload,
+        object? payload,
         CancellationToken cancellationToken
     )
     {
         using var scope = serviceProvider.CreateScope();
-
-        var messageInstance = JsonSerializerUtils.Deserialize(payload, messageType);
-
-        if (messageInstance is null)
-        {
-            throw new Exception("Could not deserialize message instance");
-        }
 
         var jobRequestWithOutputInterface = messageType
             .GetInterfaces()
@@ -39,7 +32,7 @@ public class JobHandlerCaller(IServiceProvider serviceProvider) : IJobHandlerCal
             var executeMethod = handler.GetType().GetMethod("ExecuteAsync");
 
             // The result of Invoke will be Task<TR>
-            var taskResult = executeMethod!.Invoke(handler, [messageInstance, cancellationToken]);
+            var taskResult = executeMethod!.Invoke(handler, [payload, cancellationToken]);
 
             var result = await (dynamic)taskResult!;
 
@@ -53,8 +46,7 @@ public class JobHandlerCaller(IServiceProvider serviceProvider) : IJobHandlerCal
 
             var executeMethod = handler.GetType().GetMethod("ExecuteAsync");
 
-            var taskResult = (Task?)
-                executeMethod!.Invoke(handler, [messageInstance, cancellationToken]);
+            var taskResult = (Task?)executeMethod!.Invoke(handler, [payload, cancellationToken]);
 
             await taskResult!;
 

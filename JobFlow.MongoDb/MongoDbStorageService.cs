@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using JobFlow.Core.Abstractions;
@@ -19,6 +21,33 @@ public class MongoDbStorageService : IStorageService
     {
         var database = mongoClient.GetDatabase(mongoDbOptions.Database);
         _jobCollection = database.GetCollection<Job>(mongoDbOptions.Collection);
+    }
+
+    public async Task<Job?> GetJobAsync(string jobId, CancellationToken cancellationToken = default)
+    {
+        var filter = Builders<Job>.Filter.Eq(j => j.Id, jobId);
+
+        var job = await _jobCollection.Find(filter).FirstOrDefaultAsync(cancellationToken);
+
+        return job;
+    }
+
+    public async Task<IList<string>> GetRequestedToStopJobsIdsAsync(
+        CancellationToken cancellationToken = default
+    )
+    {
+        var filter =
+            Builders<Job>.Filter.Eq(j => j.Status, JobStatus.Processing)
+            & Builders<Job>.Filter.Ne(j => j.StoppedAt, null);
+
+        var projection = Builders<Job>.Projection.Include(j => j.Id);
+
+        var jobsToUpdateQuery = await _jobCollection
+            .Find(filter)
+            .Project<Job>(projection) // Project to Job, Id will be populated
+            .ToListAsync(cancellationToken);
+
+        return jobsToUpdateQuery.Select(x => x.Id).ToList();
     }
 
     public async Task<string> InsertAsync<T>(
@@ -42,6 +71,23 @@ public class MongoDbStorageService : IStorageService
         await _jobCollection.InsertOneAsync(job, cancellationToken: cancellationToken);
 
         return job.Id;
+    }
+
+    public async Task StopJobAsync(string jobId, CancellationToken cancellationToken = default)
+    {
+        var filter = Builders<Job>.Filter.Eq(j => j.Id, jobId);
+
+        var utcNow = DateTime.UtcNow;
+
+        var update = Builders<Job>
+            .Update.Set(j => j.StoppedAt, utcNow)
+            .Set(j => j.UpdatedAt, utcNow);
+
+        await _jobCollection.FindOneAndUpdateAsync(
+            filter,
+            update,
+            cancellationToken: cancellationToken
+        );
     }
 
     public async Task<long> GetPendingCountAsync(
@@ -163,18 +209,28 @@ public class MongoDbStorageService : IStorageService
         CancellationToken cancellationToken = default
     )
     {
-        var backToPendingFilter = Builders<Job>.Filter.Eq(j => j.Id, jobId);
+        var filter = Builders<Job>.Filter.Eq(j => j.Id, jobId);
 
-        var backToPendingUpdate = Builders<Job>
+        var update = Builders<Job>
             .Update.Set(j => j.Status, JobStatus.Pending)
             .Set(j => j.WorkerId, null)
             .Set(j => j.UpdatedAt, DateTime.UtcNow);
 
-        await _jobCollection.UpdateOneAsync(
-            backToPendingFilter,
-            backToPendingUpdate,
-            cancellationToken: cancellationToken
-        );
+        await _jobCollection.UpdateOneAsync(filter, update, cancellationToken: cancellationToken);
+    }
+
+    public async Task MarkJobAsStoppedById(
+        string jobId,
+        CancellationToken cancellationToken = default
+    )
+    {
+        var filter = Builders<Job>.Filter.Eq(j => j.Id, jobId);
+
+        var update = Builders<Job>
+            .Update.Set(j => j.Status, JobStatus.Stopped)
+            .Set(j => j.UpdatedAt, DateTime.UtcNow);
+
+        await _jobCollection.UpdateOneAsync(filter, update, cancellationToken: cancellationToken);
     }
 
     public async Task MarkWorkerProcessingJobsAsPending(

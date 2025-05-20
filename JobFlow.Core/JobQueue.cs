@@ -1,7 +1,6 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
 using JobFlow.Core.Abstractions;
-using JobFlow.Core.Utils;
 
 namespace JobFlow.Core;
 
@@ -21,5 +20,15 @@ public class JobQueue(IStorageService storageService) : IJobQueue
         );
 
         return jobId;
+    }
+
+    public async Task StopJobAsync(string jobId, CancellationToken ct = default)
+    {
+        await storageService.StopJobAsync(jobId, ct);
+    }
+
+    public Task<Job?> GetJobAsync(string jobId, CancellationToken ct = default)
+    {
+        return storageService.GetJobAsync(jobId, ct);
     }
 }
