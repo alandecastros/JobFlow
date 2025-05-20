@@ -25,7 +25,7 @@ public class PostgresStorageService(
             """
         );
 
-        command.Parameters.AddWithValue("jobId", jobId);
+        command.Parameters.AddWithValue("jobId", new Guid(jobId));
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
 
