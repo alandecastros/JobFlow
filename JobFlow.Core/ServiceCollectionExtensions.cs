@@ -47,7 +47,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IJobCancellationTokenManager, JobCancellationTokenManager>();
 
         services.AddHostedService<JobPollingBackgroundService>();
-        services.AddHostedService<StopJobPollingBackgroundService>();
+        // services.AddHostedService<StopJobPollingBackgroundService>();
 
         var options = new JobFlowWorkerOptions(services);
 
