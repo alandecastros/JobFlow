@@ -29,7 +29,7 @@ public class JobHandlerCaller(IServiceProvider serviceProvider) : IJobHandlerCal
             var specificHandlerType = genericHandlerType.MakeGenericType(messageType, returnType);
             var handler = scope.ServiceProvider.GetRequiredService(specificHandlerType);
 
-            var executeMethod = handler.GetType().GetMethod("ExecuteAsync");
+            var executeMethod = handler.GetType().GetMethod("HandleJobAsync");
 
             // The result of Invoke will be Task<TR>
             var taskResult = executeMethod!.Invoke(handler, [payload, cancellationToken]);
@@ -44,7 +44,7 @@ public class JobHandlerCaller(IServiceProvider serviceProvider) : IJobHandlerCal
             var specificHandlerType = genericHandlerType.MakeGenericType(messageType);
             var handler = scope.ServiceProvider.GetRequiredService(specificHandlerType);
 
-            var executeMethod = handler.GetType().GetMethod("ExecuteAsync");
+            var executeMethod = handler.GetType().GetMethod("HandleJobAsync");
 
             var taskResult = (Task?)executeMethod!.Invoke(handler, [payload, cancellationToken]);
 
