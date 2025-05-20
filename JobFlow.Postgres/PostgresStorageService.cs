@@ -160,8 +160,12 @@ public class PostgresStorageService(
                     worker_id = @workerId,
                     updated_at = now()
                 FROM cte_job
-                WHERE job.id = cte_job.id
-                RETURNING job.id, job.payload, job.payload_type, job.status, job.queue;
+                WHERE {postgresOptions.TableName}.id = cte_job.id
+                RETURNING {postgresOptions.TableName}.id, 
+                    {postgresOptions.TableName}.payload, 
+                    {postgresOptions.TableName}.payload_type, 
+                    {postgresOptions.TableName}.status, 
+                    {postgresOptions.TableName}.queue;
                 COMMIT;
             """
         );
