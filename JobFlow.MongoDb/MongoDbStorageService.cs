@@ -161,12 +161,12 @@ public class MongoDbStorageService : IStorageService
 
     public async Task MarkJobAsFailedById(
         string jobId,
-        ResultDto resultDto,
+        string errorMessage,
         Exception? exception = null,
         CancellationToken cancellationToken = default
     )
     {
-        var resultSerialized = JsonSerializerUtils.Serialize(resultDto);
+        var resultSerialized = JsonSerializerUtils.Serialize(errorMessage);
 
         var failedFilter = Builders<Job>.Filter.Eq(j => j.Id, jobId);
         var failedUpdate = Builders<Job>
@@ -184,11 +184,11 @@ public class MongoDbStorageService : IStorageService
 
     public async Task MarkJobAsCompletedById(
         string jobId,
-        ResultDto resultDto,
+        object? results,
         CancellationToken cancellationToken = default
     )
     {
-        var resultSerialized = JsonSerializerUtils.Serialize(resultDto);
+        var resultSerialized = results is not null ? JsonSerializerUtils.Serialize(results) : null;
 
         var completeFilter = Builders<Job>.Filter.Eq(j => j.Id, jobId);
 

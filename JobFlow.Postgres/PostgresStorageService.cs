@@ -195,12 +195,12 @@ public class PostgresStorageService(
 
     public async Task MarkJobAsFailedById(
         string jobId,
-        ResultDto resultDto,
+        string errorMessage,
         Exception? exception = null,
         CancellationToken cancellationToken = default
     )
     {
-        var resultsInJson = JsonSerializerUtils.SerializeToDocument(resultDto);
+        var resultsInJson = JsonSerializerUtils.SerializeToDocument(errorMessage);
 
         var command = dataSource.CreateCommand(
             $"UPDATE {postgresOptions.TableName} SET status = 4, results = @results, updated_at = now() WHERE id = @id"
@@ -212,16 +212,18 @@ public class PostgresStorageService(
 
     public async Task MarkJobAsCompletedById(
         string jobId,
-        ResultDto resultDto,
+        object? results,
         CancellationToken cancellationToken = default
     )
     {
-        var resultsInJson = JsonSerializerUtils.SerializeToDocument(resultDto);
+        var resultsInJson = results is not null
+            ? JsonSerializerUtils.SerializeToDocument(results)
+            : null;
 
         var command = dataSource.CreateCommand(
             $"UPDATE {postgresOptions.TableName} SET status = 3, results = @results, updated_at = now() WHERE id = @id"
         );
-        command.Parameters.AddWithValue("results", resultsInJson);
+        command.Parameters.AddWithValue("results", resultsInJson ?? (object)DBNull.Value);
         command.Parameters.AddWithValue("id", Guid.Parse(jobId));
         await command.ExecuteNonQueryAsync(cancellationToken);
     }

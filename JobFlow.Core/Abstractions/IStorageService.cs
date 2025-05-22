@@ -41,14 +41,14 @@ public interface IStorageService
 
     Task MarkJobAsFailedById(
         string jobId,
-        ResultDto resultDto,
+        string errorMessage,
         Exception? exception = null,
         CancellationToken cancellationToken = default
     );
 
     Task MarkJobAsCompletedById(
         string jobId,
-        ResultDto resultDto,
+        object? results,
         CancellationToken cancellationToken = default
     );
 

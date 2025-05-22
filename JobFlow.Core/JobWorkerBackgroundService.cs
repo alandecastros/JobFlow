@@ -2,7 +2,6 @@
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
-using FluentResults;
 using JobFlow.Core.Abstractions;
 using JobFlow.Core.Utils;
 using Microsoft.Extensions.DependencyInjection;
@@ -66,9 +65,7 @@ public class JobWorkerBackgroundService(
                     {
                         await storageService.MarkJobAsFailedById(
                             acquiredJob.Id,
-                            Result
-                                .Fail($"{workerId} can't find payload type {payloadType}")
-                                .ToResultDto(),
+                            $"{workerId} can't find payload type {payloadType}",
                             // ReSharper disable once PossiblyMistakenUseOfCancellationToken
                             cancellationToken: stoppingToken
                         );
@@ -82,7 +79,7 @@ public class JobWorkerBackgroundService(
                     {
                         await storageService.MarkJobAsFailedById(
                             acquiredJob.Id,
-                            Result.Fail($"{workerId} can't deserialize the payload").ToResultDto(),
+                            $"{workerId} can't deserialize the payload",
                             // ReSharper disable once PossiblyMistakenUseOfCancellationToken
                             cancellationToken: stoppingToken
                         );
@@ -103,11 +100,9 @@ public class JobWorkerBackgroundService(
                         linkedCts.Token
                     );
 
-                    var resultDto = JobHandlerResultUtils.ToResultDto(result);
-
                     await storageService.MarkJobAsCompletedById(
                         acquiredJob.Id,
-                        resultDto,
+                        result,
                         // ReSharper disable once PossiblyMistakenUseOfCancellationToken
                         stoppingToken
                     );
@@ -209,7 +204,7 @@ public class JobWorkerBackgroundService(
     {
         await storageService.MarkJobAsFailedById(
             jobId,
-            Result.Fail("Unexpected error").ToResultDto(),
+            "Unexpected error",
             exception,
             cancellationToken
         );

@@ -16,18 +16,6 @@ public static class JsonSerializerUtils
         return JsonSerializer.Serialize(obj, JsonSerializerOptions);
     }
 
-    public static JsonDocument SerializeToDocument(string json)
-    {
-        return JsonSerializer.SerializeToDocument(
-            json,
-            new JsonSerializerOptions
-            {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                PropertyNameCaseInsensitive = true,
-            }
-        );
-    }
-
     public static JsonDocument SerializeToDocument(object json)
     {
         return JsonSerializer.SerializeToDocument(
