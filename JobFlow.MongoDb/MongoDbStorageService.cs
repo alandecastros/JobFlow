@@ -243,7 +243,7 @@ public class MongoDbStorageService : IStorageService
             & Builders<Job>.Filter.Eq(j => j.WorkerId, workerId);
 
         var backToPendingUpdate = Builders<Job>
-            .Update.Set(j => j.Status, JobStatus.Pending)
+            .Update.Set(j => j.Status, JobStatus.Stopped)
             .Set(j => j.WorkerId, null)
             .Set(j => j.UpdatedAt, DateTime.UtcNow);
 
