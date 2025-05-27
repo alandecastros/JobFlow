@@ -190,7 +190,7 @@ public class JobWorkerBackgroundService(
 
         jobCancellationTokenManager.CancelAllJobTokenSources();
 
-        await storageService.MarkWorkerProcessingJobsAsFailed(workerId, cancellationToken);
+        await storageService.MarkWorkerProcessingJobsAsStopped(workerId, cancellationToken);
 
         await base.StopAsync(cancellationToken);
     }

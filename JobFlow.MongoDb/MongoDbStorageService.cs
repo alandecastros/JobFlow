@@ -233,7 +233,7 @@ public class MongoDbStorageService : IStorageService
         await _jobCollection.UpdateOneAsync(filter, update, cancellationToken: cancellationToken);
     }
 
-    public async Task MarkWorkerProcessingJobsAsFailed(
+    public async Task MarkWorkerProcessingJobsAsStopped(
         string workerId,
         CancellationToken cancellationToken = default
     )
