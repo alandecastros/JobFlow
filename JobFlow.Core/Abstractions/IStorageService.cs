@@ -56,7 +56,7 @@ public interface IStorageService
 
     Task MarkJobAsStoppedById(string jobId, CancellationToken cancellationToken = default);
 
-    Task MarkWorkerProcessingJobsAsPending(
+    Task MarkWorkerProcessingJobsAsFailed(
         string workerId,
         CancellationToken cancellationToken = default
     );

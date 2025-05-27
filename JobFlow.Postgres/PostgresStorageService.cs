@@ -249,15 +249,18 @@ public class PostgresStorageService(
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
-    public async Task MarkWorkerProcessingJobsAsPending(
+    public async Task MarkWorkerProcessingJobsAsFailed(
         string workerId,
         CancellationToken cancellationToken = default
     )
     {
+        var resultsInJson = JsonSerializerUtils.SerializeToDocument("This job was being processed when the worker was stopped.");
+        
         var command = dataSource.CreateCommand(
-            $"UPDATE {postgresOptions.TableName} SET status = 1, worker_id = null, updated_at = now() WHERE worker_id = @workerId AND status = 2"
+            $"UPDATE {postgresOptions.TableName} SET status = 1, worker_id = null, results = @results, updated_at = now() WHERE worker_id = @workerId AND status = 4"
         );
         command.Parameters.AddWithValue("workerId", workerId);
+        command.Parameters.AddWithValue("results", resultsInJson);
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
 }
