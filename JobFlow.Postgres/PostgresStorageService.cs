@@ -240,9 +240,13 @@ public class PostgresStorageService(
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
-    public Task MarkJobAsStoppedById(string jobId, CancellationToken cancellationToken = default)
+    public async Task MarkJobAsStoppedById(string jobId, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        var command = dataSource.CreateCommand(
+            $"UPDATE {postgresOptions.TableName} SET status = 5, worker_id = null, updated_at = now() WHERE id = @id"
+        );
+        command.Parameters.AddWithValue("id", Guid.Parse(jobId));
+        await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
     public async Task MarkWorkerProcessingJobsAsPending(
@@ -251,7 +255,7 @@ public class PostgresStorageService(
     )
     {
         var command = dataSource.CreateCommand(
-            $"UPDATE {postgresOptions.TableName} SET status = 1, worker_id = null, updated_at = now() WHERE worker_id = @workerId"
+            $"UPDATE {postgresOptions.TableName} SET status = 1, worker_id = null, updated_at = now() WHERE worker_id = @workerId AND status = 2"
         );
         command.Parameters.AddWithValue("workerId", workerId);
         await command.ExecuteNonQueryAsync(cancellationToken);
