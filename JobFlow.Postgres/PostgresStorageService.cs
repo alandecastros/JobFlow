@@ -255,7 +255,7 @@ public class PostgresStorageService(
     )
     {
         var command = dataSource.CreateCommand(
-            $"UPDATE {postgresOptions.TableName} SET status = 5, worker_id = null, results = @results, updated_at = now() WHERE worker_id = @workerId AND status = 2"
+            $"UPDATE {postgresOptions.TableName} SET status = 5, worker_id = null, results = null, updated_at = now() WHERE worker_id = @workerId AND status = 2"
         );
         command.Parameters.AddWithValue("workerId", workerId);
         await command.ExecuteNonQueryAsync(cancellationToken);

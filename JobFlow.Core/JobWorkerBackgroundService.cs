@@ -175,6 +175,10 @@ public class JobWorkerBackgroundService(
         }
         catch (Exception ex)
         {
+            using var scope = serviceProvider.CreateScope();
+            var storageService = scope.ServiceProvider.GetRequiredService<IStorageService>();
+            await storageService.MarkWorkerProcessingJobsAsStopped(workerId, CancellationToken.None);
+            
             logger.LogError(
                 ex,
                 "Consumer service for queue '{QueueName}' stopped due to an unexpected error.",
