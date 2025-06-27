@@ -1,7 +1,7 @@
 <Project>
     <PropertyGroup>
         <VersionPrefix>0.0.1</VersionPrefix>
-        <VersionSuffix>rc.5</VersionSuffix>
+        <VersionSuffix>rc.6</VersionSuffix>
         <Authors>Alan Castro</Authors>
         <Copyright>Copyright © Alan Castro</Copyright>
     </PropertyGroup>
