@@ -16,20 +16,13 @@ public static class JsonSerializerUtils
         return JsonSerializer.Serialize(obj, JsonSerializerOptions);
     }
 
-    public static JsonDocument SerializeToDocument(object json)
-    {
-        return JsonSerializer.SerializeToDocument(
-            json,
-            new JsonSerializerOptions
-            {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                PropertyNameCaseInsensitive = true,
-            }
-        );
-    }
-
     public static object? Deserialize(string payload, Type type)
     {
         return JsonSerializer.Deserialize(payload, type, JsonSerializerOptions);
+    }
+
+    public static T? Deserialize<T>(string payload)
+    {
+        return JsonSerializer.Deserialize<T>(payload, JsonSerializerOptions);
     }
 }

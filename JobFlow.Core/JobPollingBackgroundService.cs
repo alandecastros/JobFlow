@@ -114,6 +114,7 @@ public class JobPollingBackgroundService : BackgroundService
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Unexpected error during polling cycle.");
+                    break;
                 }
             }
 

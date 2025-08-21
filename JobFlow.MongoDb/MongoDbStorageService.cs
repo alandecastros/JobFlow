@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using JobFlow.Core.Abstractions;
@@ -32,22 +30,19 @@ public class MongoDbStorageService : IStorageService
         return job;
     }
 
-    public async Task<IList<string>> GetRequestedToStopJobsIdsAsync(
+    public async Task SetJobData(
+        string jobId,
+        string? data,
         CancellationToken cancellationToken = default
     )
     {
-        var filter =
-            Builders<Job>.Filter.Eq(j => j.Status, JobStatus.Processing)
-            & Builders<Job>.Filter.Ne(j => j.StoppedAt, null);
+        var filter = Builders<Job>.Filter.Eq(j => j.Id, jobId);
 
-        var projection = Builders<Job>.Projection.Include(j => j.Id);
+        var update = Builders<Job>
+            .Update.Set(j => j.Data, data)
+            .Set(j => j.UpdatedAt, DateTime.UtcNow);
 
-        var jobsToUpdateQuery = await _jobCollection
-            .Find(filter)
-            .Project<Job>(projection) // Project to Job, Id will be populated
-            .ToListAsync(cancellationToken);
-
-        return jobsToUpdateQuery.Select(x => x.Id).ToList();
+        await _jobCollection.UpdateOneAsync(filter, update, cancellationToken: cancellationToken);
     }
 
     public async Task<string> InsertAsync<T>(
@@ -62,7 +57,7 @@ public class MongoDbStorageService : IStorageService
 
         var job = new Job
         {
-            Status = 1,
+            Status = JobStatus.Pending,
             Queue = queue,
             Payload = payload,
             PayloadType = payloadType,
@@ -80,7 +75,7 @@ public class MongoDbStorageService : IStorageService
         var utcNow = DateTime.UtcNow;
 
         var update = Builders<Job>
-            .Update.Set(j => j.StoppedAt, utcNow)
+            .Update.Set(x => x.Status, JobStatus.Stopped)
             .Set(j => j.UpdatedAt, utcNow);
 
         await _jobCollection.FindOneAndUpdateAsync(
@@ -159,70 +154,58 @@ public class MongoDbStorageService : IStorageService
         return acquiredJob;
     }
 
-    public async Task MarkJobAsFailedById(
+    public async Task SetJobAsFailed(
         string jobId,
-        string errorMessage,
-        Exception? exception = null,
+        Exception exception,
         CancellationToken cancellationToken = default
     )
     {
-        var resultSerialized = JsonSerializerUtils.Serialize(errorMessage);
-
-        var failedFilter = Builders<Job>.Filter.Eq(j => j.Id, jobId);
-        var failedUpdate = Builders<Job>
+        var filter = Builders<Job>.Filter.Eq(j => j.Id, jobId);
+        var update = Builders<Job>
             .Update.Set(j => j.Status, JobStatus.Failed)
-            .Set(j => j.Results, resultSerialized)
-            .Set(j => j.StackTrace, exception?.ToString())
+            .Set(j => j.ExceptionMessage, exception.Message)
+            .Set(j => j.ExceptionStacktrace, exception.StackTrace)
             .Set(j => j.UpdatedAt, DateTime.UtcNow);
 
         await _jobCollection.UpdateOneAsync(
-            failedFilter,
-            failedUpdate,
+            filter,
+            update,
             cancellationToken: cancellationToken // Pass the token
         );
     }
 
-    public async Task MarkJobAsCompletedById(
+    public async Task SetJobAsCompleted(
         string jobId,
-        object? results,
-        CancellationToken cancellationToken = default
-    )
-    {
-        var resultSerialized = results is not null ? JsonSerializerUtils.Serialize(results) : null;
-
-        var completeFilter = Builders<Job>.Filter.Eq(j => j.Id, jobId);
-
-        var completeUpdate = Builders<Job>
-            .Update.Set(j => j.Status, JobStatus.Completed)
-            .Set(j => j.Results, resultSerialized)
-            .Set(j => j.UpdatedAt, DateTime.UtcNow);
-
-        await _jobCollection.UpdateOneAsync(
-            completeFilter,
-            completeUpdate,
-            cancellationToken: cancellationToken
-        );
-    }
-
-    public async Task MarkJobAsPendingById(
-        string jobId,
+        string? data,
         CancellationToken cancellationToken = default
     )
     {
         var filter = Builders<Job>.Filter.Eq(j => j.Id, jobId);
 
         var update = Builders<Job>
-            .Update.Set(j => j.Status, JobStatus.Pending)
-            .Set(j => j.WorkerId, null)
+            .Update.Set(j => j.Status, JobStatus.Completed)
+            .Set(j => j.Data, data)
             .Set(j => j.UpdatedAt, DateTime.UtcNow);
 
         await _jobCollection.UpdateOneAsync(filter, update, cancellationToken: cancellationToken);
     }
 
-    public async Task MarkJobAsStoppedById(
-        string jobId,
-        CancellationToken cancellationToken = default
-    )
+    public async Task SetJobAsPending(string jobId, CancellationToken cancellationToken = default)
+    {
+        var filter = Builders<Job>.Filter.Eq(j => j.Id, jobId);
+
+        var update = Builders<Job>
+            .Update.Set(j => j.Status, JobStatus.Pending)
+            .Set(j => j.WorkerId, null)
+            .Set(j => j.Data, null)
+            .Set(j => j.ExceptionMessage, null)
+            .Set(j => j.ExceptionStacktrace, null)
+            .Set(j => j.UpdatedAt, DateTime.UtcNow);
+
+        await _jobCollection.UpdateOneAsync(filter, update, cancellationToken: cancellationToken);
+    }
+
+    public async Task SetJobAsStopped(string jobId, CancellationToken cancellationToken = default)
     {
         var filter = Builders<Job>.Filter.Eq(j => j.Id, jobId);
 
@@ -233,7 +216,7 @@ public class MongoDbStorageService : IStorageService
         await _jobCollection.UpdateOneAsync(filter, update, cancellationToken: cancellationToken);
     }
 
-    public async Task MarkWorkerProcessingJobsAsStopped(
+    public async Task SetWorkerProcessingJobsAsStopped(
         string workerId,
         CancellationToken cancellationToken = default
     )

@@ -7,6 +7,7 @@ namespace JobFlow.Core.Abstractions;
 public interface IJobHandlerCaller
 {
     Task<object?> CallHandler(
+        string jobId,
         Type messageType,
         object? payload,
         CancellationToken cancellationToken

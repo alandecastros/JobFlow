@@ -11,6 +11,7 @@ namespace JobFlow.Core;
 public class JobHandlerCaller(IServiceProvider serviceProvider) : IJobHandlerCaller
 {
     public async Task<object?> CallHandler(
+        string jobId,
         Type messageType,
         object? payload,
         CancellationToken cancellationToken
@@ -32,7 +33,7 @@ public class JobHandlerCaller(IServiceProvider serviceProvider) : IJobHandlerCal
             var executeMethod = handler.GetType().GetMethod("HandleJobAsync");
 
             // The result of Invoke will be Task<TR>
-            var taskResult = executeMethod!.Invoke(handler, [payload, cancellationToken]);
+            var taskResult = executeMethod!.Invoke(handler, [jobId, payload, cancellationToken]);
 
             var result = await (dynamic)taskResult!;
 
@@ -46,7 +47,8 @@ public class JobHandlerCaller(IServiceProvider serviceProvider) : IJobHandlerCal
 
             var executeMethod = handler.GetType().GetMethod("HandleJobAsync");
 
-            var taskResult = (Task?)executeMethod!.Invoke(handler, [payload, cancellationToken]);
+            var taskResult = (Task?)
+                executeMethod!.Invoke(handler, [jobId, payload, cancellationToken]);
 
             await taskResult!;
 

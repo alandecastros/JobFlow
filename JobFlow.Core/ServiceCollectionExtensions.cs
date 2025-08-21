@@ -11,59 +11,33 @@ namespace JobFlow.Core;
 
 public static class ServiceCollectionExtensions
 {
-    public static IServiceCollection AddJobFlowCore(
-        this IServiceCollection services,
-        Assembly[] assemblies
-    )
-    {
-        services.AddSingleton<IChannelManager, ChannelManager>();
-        services.AddSingleton<IJobHandlerCaller, JobHandlerCaller>();
-
-        RegisterJobHandlersFromAssemblies(services, assemblies);
-
-        return services;
-    }
-
-    public static IServiceCollection AddJobFlowQueue(
+    public static IServiceCollection AddJobFlow(
         this IServiceCollection services,
         Action<JobFlowQueueOptions> configure
     )
     {
         services.AddScoped<IJobQueue, JobQueue>();
-        configure(new JobFlowQueueOptions(services));
-        return services;
-    }
+        var options = new JobFlowQueueOptions(services);
+        configure(options);
 
-    public static IServiceCollection AddJobFlowWorker(
-        this IServiceCollection services,
-        Assembly[] assemblies,
-        Action<JobFlowWorkerOptions> configure
-    )
-    {
-        RegisterJobHandlersFromAssemblies(services, assemblies);
+        if (options.Worker is null)
+            return services;
+
+        var totalHandlers = RegisterJobHandlersFromAssemblies(services, options.Worker.Assemblies);
 
         services.AddSingleton<IChannelManager, ChannelManager>();
         services.AddSingleton<IJobHandlerCaller, JobHandlerCaller>();
         services.AddSingleton<IJobCancellationTokenManager, JobCancellationTokenManager>();
 
         services.AddHostedService<JobPollingBackgroundService>();
-        // services.AddHostedService<StopJobPollingBackgroundService>();
 
-        var options = new JobFlowWorkerOptions(services);
+        services.AddSingleton(options.Worker);
 
-        configure(options);
-
-        services.AddSingleton(options);
-
-        var queues = options.Queues ?? new Dictionary<string, JobFlowWorkerQueueOptions>();
-
-        if (!queues.ContainsKey("default"))
-        {
-            queues["default"] = new JobFlowWorkerQueueOptions { NumberOfWorkers = 0 };
-        }
+        var queues = options.Worker.Queues ?? new Dictionary<string, JobFlowWorkerQueueOptions>();
 
         var serviceProvider = services.BuildServiceProvider();
         var channelManager = serviceProvider.GetRequiredService<IChannelManager>();
+        var logger = serviceProvider.GetRequiredService<ILogger<JobPollingBackgroundService>>();
 
         foreach (var (queueName, queueOption) in queues)
         {
@@ -75,8 +49,8 @@ public static class ServiceCollectionExtensions
             {
                 services.AddSingleton<IHostedService>(provider => new JobWorkerBackgroundService(
                     queueName,
-                    options.WorkerId!,
-                    assemblies,
+                    options.Worker.WorkerId!,
+                    options.Worker.Assemblies,
                     serviceProvider: provider.GetRequiredService<IServiceProvider>(),
                     channelManager: provider.GetRequiredService<IChannelManager>(),
                     jobCancellationTokenManager: provider.GetRequiredService<IJobCancellationTokenManager>(),
@@ -86,14 +60,18 @@ public static class ServiceCollectionExtensions
             }
         }
 
+        logger.LogInformation($"Total of {totalHandlers} of job handlers registered.");
+
         return services;
     }
 
-    private static void RegisterJobHandlersFromAssemblies(
+    private static int RegisterJobHandlersFromAssemblies(
         IServiceCollection services,
         Assembly[] assemblies
     )
     {
+        var totalHandlers = 0;
+
         foreach (var assembly in assemblies)
         {
             var jobHandlerImplementations = assembly
@@ -127,9 +105,12 @@ public static class ServiceCollectionExtensions
 
                 foreach (var interfaceType in handlerInterfaces)
                 {
+                    totalHandlers++;
                     services.AddTransient(interfaceType, concreteType);
                 }
             }
         }
+
+        return totalHandlers;
     }
 }

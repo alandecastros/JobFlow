@@ -32,7 +32,7 @@ public class JobWorkerBackgroundService(
                 using var scope = serviceProvider.CreateScope();
                 var storageService = scope.ServiceProvider.GetRequiredService<IStorageService>();
 
-                Job? acquiredJob = null;
+                Abstractions.Job? acquiredJob = null;
                 CancellationToken? jobSpecificToken = null;
                 CancellationTokenSource? linkedCts = null;
 
@@ -63,27 +63,10 @@ public class JobWorkerBackgroundService(
 
                     if (payloadType == null)
                     {
-                        await storageService.MarkJobAsFailedById(
-                            acquiredJob.Id,
-                            $"{workerId} can't find payload type {payloadType}",
-                            // ReSharper disable once PossiblyMistakenUseOfCancellationToken
-                            cancellationToken: stoppingToken
-                        );
-
-                        continue;
+                        throw new JobPayloadTypeNotFoundException(workerId, queueName);
                     }
 
                     var payload = JsonSerializerUtils.Deserialize(acquiredJob.Payload, payloadType);
-
-                    if (payload == null)
-                    {
-                        await storageService.MarkJobAsFailedById(
-                            acquiredJob.Id,
-                            $"{workerId} can't deserialize the payload",
-                            // ReSharper disable once PossiblyMistakenUseOfCancellationToken
-                            cancellationToken: stoppingToken
-                        );
-                    }
 
                     jobSpecificToken = jobCancellationTokenManager.RegisterJobTokenSource(
                         acquiredJob.Id
@@ -94,15 +77,20 @@ public class JobWorkerBackgroundService(
                         stoppingToken
                     );
 
-                    var result = await jobHandlerCaller.CallHandler(
+                    var data = await jobHandlerCaller.CallHandler(
+                        acquiredJob.Id,
                         payloadType,
                         payload,
                         linkedCts.Token
                     );
 
-                    await storageService.MarkJobAsCompletedById(
+                    var dataSerialized = data is not null
+                        ? JsonSerializerUtils.Serialize(data)
+                        : null;
+
+                    await storageService.SetJobAsCompleted(
                         acquiredJob.Id,
-                        result,
+                        dataSerialized,
                         // ReSharper disable once PossiblyMistakenUseOfCancellationToken
                         stoppingToken
                     );
@@ -117,8 +105,8 @@ public class JobWorkerBackgroundService(
                             queueName
                         );
 
-                        await storageService.MarkJobAsStoppedById(
-                            acquiredJob!.Id,
+                        await storageService.SetJobAsStopped(
+                            acquiredJob.Id,
                             CancellationToken.None
                         );
                     }
@@ -133,8 +121,7 @@ public class JobWorkerBackgroundService(
 
                         if (acquiredJob != null)
                         {
-                            await MarkJobAsFailedAsync(
-                                storageService,
+                            await storageService.SetJobAsFailed(
                                 acquiredJob.Id,
                                 ex,
                                 CancellationToken.None
@@ -154,8 +141,7 @@ public class JobWorkerBackgroundService(
 
                     if (acquiredJob != null)
                     {
-                        await MarkJobAsFailedAsync(
-                            storageService,
+                        await storageService.SetJobAsFailed(
                             acquiredJob.Id,
                             ex,
                             CancellationToken.None
@@ -175,42 +161,21 @@ public class JobWorkerBackgroundService(
         }
         catch (Exception ex)
         {
+            logger.LogError(ex, ex.Message);
+            jobCancellationTokenManager.CancelAllJobTokenSources();
+
             using var scope = serviceProvider.CreateScope();
             var storageService = scope.ServiceProvider.GetRequiredService<IStorageService>();
-            await storageService.MarkWorkerProcessingJobsAsStopped(workerId, CancellationToken.None);
-            
-            logger.LogError(
-                ex,
-                "Consumer service for queue '{QueueName}' stopped due to an unexpected error.",
-                queueName
-            );
+            await storageService.SetWorkerProcessingJobsAsStopped(workerId, CancellationToken.None);
+
+            if (ex is not OperationCanceledException)
+            {
+                logger.LogError(
+                    ex,
+                    "Consumer service for queue '{QueueName}' stopped due to an unexpected error.",
+                    queueName
+                );
+            }
         }
-    }
-
-    public override async Task StopAsync(CancellationToken cancellationToken)
-    {
-        using var scope = serviceProvider.CreateScope();
-        var storageService = scope.ServiceProvider.GetRequiredService<IStorageService>();
-
-        jobCancellationTokenManager.CancelAllJobTokenSources();
-
-        await storageService.MarkWorkerProcessingJobsAsStopped(workerId, cancellationToken);
-
-        await base.StopAsync(cancellationToken);
-    }
-
-    private async Task MarkJobAsFailedAsync(
-        IStorageService storageService,
-        string jobId,
-        Exception exception,
-        CancellationToken cancellationToken
-    )
-    {
-        await storageService.MarkJobAsFailedById(
-            jobId,
-            "Unexpected error",
-            exception,
-            cancellationToken
-        );
     }
 }

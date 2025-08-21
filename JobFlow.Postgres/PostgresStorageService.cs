@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using JobFlow.Core.Abstractions;
@@ -19,7 +18,19 @@ public class PostgresStorageService(
     {
         var command = dataSource.CreateCommand(
             $"""
-            SELECT id, queue, status, payload, payload_type, results, created_at, updated_at, stopped_at
+            SELECT 
+                id, 
+                queue, 
+                status, 
+                payload, 
+                payload_type, 
+                data, 
+                created_at, 
+                updated_at, 
+                exception_message,
+                exception_stacktrace,
+                exception_inner_message,
+                exception_inner_stacktrace
             FROM {postgresOptions.TableName}
             WHERE id = @jobId
             """
@@ -39,10 +50,13 @@ public class PostgresStorageService(
         var status = reader.GetInt32(2);
         var payload = reader.GetString(3);
         var payloadType = reader.GetString(4);
-        var results = reader.IsDBNull(5) ? null : reader.GetString(5);
+        var data = reader.IsDBNull(5) ? null : reader.GetString(5);
         var createdAt = reader.GetDateTime(6);
         var updatedAt = reader.GetDateTime(7);
-        var stoppedAt = reader.IsDBNull(8) ? (DateTime?)null : reader.GetDateTime(8);
+        var exceptionMessage = reader.IsDBNull(8) ? null : reader.GetString(8);
+        var exceptionStacktrace = reader.IsDBNull(9) ? null : reader.GetString(9);
+        var exceptionInnerMessage = reader.IsDBNull(10) ? null : reader.GetString(10);
+        var exceptionInnerStacktrace = reader.IsDBNull(11) ? null : reader.GetString(11);
 
         return new Job
         {
@@ -51,18 +65,28 @@ public class PostgresStorageService(
             Status = status,
             Payload = payload,
             PayloadType = payloadType,
-            Results = results,
+            Data = data,
+            ExceptionMessage = exceptionMessage,
+            ExceptionStacktrace = exceptionStacktrace,
+            ExceptionInnerMessage = exceptionInnerMessage,
+            ExceptionInnerStacktrace = exceptionInnerStacktrace,
             CreatedAt = createdAt,
             UpdatedAt = updatedAt,
-            StoppedAt = stoppedAt,
         };
     }
 
-    public Task<IList<string>> GetRequestedToStopJobsIdsAsync(
+    public async Task SetJobData(
+        string jobId,
+        string? data,
         CancellationToken cancellationToken = default
     )
     {
-        throw new NotImplementedException();
+        var command = dataSource.CreateCommand(
+            $"UPDATE {postgresOptions.TableName} SET data = @data, updated_at = now() WHERE id = @id"
+        );
+        command.Parameters.AddWithValue("data", data ?? (object)DBNull.Value);
+        command.Parameters.AddWithValue("id", Guid.Parse(jobId));
+        await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
     public async Task<string> InsertAsync<T>(
@@ -74,11 +98,32 @@ public class PostgresStorageService(
     {
         var jobId = Uuid.NewDatabaseFriendly(Database.PostgreSql);
 
-        var payload = JsonSerializerUtils.SerializeToDocument(request);
+        var payload = JsonSerializerUtils.Serialize(request);
         var payloadType = request.GetType().FullName!;
 
         await using var command = dataSource.CreateCommand(
-            $"INSERT INTO {postgresOptions.TableName} (id, status, queue, payload, payload_type, created_at, updated_at) VALUES (@id, 1, @queue, @payload, @payload_type, now(), now())"
+            $"""
+             INSERT INTO {postgresOptions.TableName}
+             (
+                 id, 
+                 status, 
+                 queue, 
+                 payload, 
+                 payload_type, 
+                 created_at, 
+                 updated_at
+             ) 
+             VALUES 
+             (
+                  @id, 
+                  {JobStatus.Pending}, 
+                  @queue, 
+                  @payload, 
+                  @payload_type, 
+                  now(), 
+                  now()
+            )
+            """
         );
 
         command.Parameters.AddWithValue("id", jobId);
@@ -91,22 +136,17 @@ public class PostgresStorageService(
         return jobId.ToString();
     }
 
-    public async Task StopJobAsync(string jobId, CancellationToken cancellationToken = default)
-    {
-        var command = dataSource.CreateCommand(
-            $"UPDATE {postgresOptions.TableName} SET status = 5, stopped_at = now(), updated_at = now() WHERE id = @id"
-        );
-        command.Parameters.AddWithValue("id", Guid.Parse(jobId));
-        await command.ExecuteNonQueryAsync(cancellationToken);
-    }
-
     public async Task<long> GetPendingCountAsync(
         string queueName,
         CancellationToken cancellationToken = default
     )
     {
         await using var cmdJobsPending = dataSource.CreateCommand(
-            $"SELECT COUNT(1) from {postgresOptions.TableName} WHERE status = 1 and queue = @queue"
+            $"""
+            SELECT COUNT(1) 
+            FROM {postgresOptions.TableName} 
+            WHERE status = {JobStatus.Pending} and queue = @queue
+            """
         );
 
         cmdJobsPending.Parameters.AddWithValue("queue", queueName);
@@ -125,7 +165,11 @@ public class PostgresStorageService(
     )
     {
         await using var cmdJobsInProgress = dataSource.CreateCommand(
-            $"SELECT COUNT(1) from {postgresOptions.TableName} WHERE status = 2 and queue = @queue and worker_id = @workerId"
+            $"""
+            SELECT COUNT(1) 
+            FROM {postgresOptions.TableName} 
+            WHERE status = {JobStatus.Processing} and queue = @queue and worker_id = @workerId
+            """
         );
 
         cmdJobsInProgress.Parameters.AddWithValue("queue", queueName);
@@ -150,13 +194,13 @@ public class PostgresStorageService(
                 WITH cte_job AS (
                     SELECT id
                     FROM {postgresOptions.TableName}
-                    WHERE status = 1 and queue = @queue
+                    WHERE status = {JobStatus.Pending} and queue = @queue
                     ORDER BY id
                     FOR UPDATE SKIP LOCKED
                     LIMIT 1
                 )
                 UPDATE {postgresOptions.TableName}
-                SET status = 2,
+                SET status = {JobStatus.Processing},
                     worker_id = @workerId,
                     updated_at = now()
                 FROM cte_job
@@ -193,69 +237,125 @@ public class PostgresStorageService(
         };
     }
 
-    public async Task MarkJobAsFailedById(
+    public async Task SetJobAsFailed(
         string jobId,
-        string errorMessage,
-        Exception? exception = null,
-        CancellationToken cancellationToken = default
-    )
-    {
-        var resultsInJson = JsonSerializerUtils.SerializeToDocument(errorMessage);
-
-        var command = dataSource.CreateCommand(
-            $"UPDATE {postgresOptions.TableName} SET status = 4, results = @results, updated_at = now() WHERE id = @id"
-        );
-        command.Parameters.AddWithValue("results", resultsInJson);
-        command.Parameters.AddWithValue("id", Guid.Parse(jobId));
-        await command.ExecuteNonQueryAsync(cancellationToken);
-    }
-
-    public async Task MarkJobAsCompletedById(
-        string jobId,
-        object? results,
-        CancellationToken cancellationToken = default
-    )
-    {
-        var resultsInJson = results is not null
-            ? JsonSerializerUtils.SerializeToDocument(results)
-            : null;
-
-        var command = dataSource.CreateCommand(
-            $"UPDATE {postgresOptions.TableName} SET status = 3, results = @results, updated_at = now() WHERE id = @id"
-        );
-        command.Parameters.AddWithValue("results", resultsInJson ?? (object)DBNull.Value);
-        command.Parameters.AddWithValue("id", Guid.Parse(jobId));
-        await command.ExecuteNonQueryAsync(cancellationToken);
-    }
-
-    public async Task MarkJobAsPendingById(
-        string jobId,
+        Exception exception,
         CancellationToken cancellationToken = default
     )
     {
         var command = dataSource.CreateCommand(
-            $"UPDATE {postgresOptions.TableName} SET status = 1, worker_id = null, updated_at = now() WHERE id = @id"
+            $"""
+            UPDATE {postgresOptions.TableName} 
+            SET 
+                status = {JobStatus.Failed}, 
+                exception_message = @exceptionMessage, 
+                exception_stacktrace = @exceptionStacktrace,
+                exception_inner_message = @exceptionInnerMessage, 
+                exception_inner_stacktrace = @exceptionInnerStacktrace, 
+                updated_at = now() 
+            WHERE id = @id
+            """
+        );
+        command.Parameters.AddWithValue("exceptionMessage", exception.Message);
+        command.Parameters.AddWithValue(
+            "exceptionStacktrace",
+            exception.StackTrace ?? (object)DBNull.Value
+        );
+        command.Parameters.AddWithValue(
+            "exceptionInnerMessage",
+            exception.InnerException?.Message ?? (object)DBNull.Value
+        );
+        command.Parameters.AddWithValue(
+            "exceptionInnerStacktrace",
+            exception.InnerException?.StackTrace ?? (object)DBNull.Value
         );
         command.Parameters.AddWithValue("id", Guid.Parse(jobId));
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
-    public async Task MarkJobAsStoppedById(string jobId, CancellationToken cancellationToken = default)
+    public async Task SetJobAsCompleted(
+        string jobId,
+        string? data,
+        CancellationToken cancellationToken = default
+    )
+    {
+        if (data is not null)
+        {
+            var command = dataSource.CreateCommand(
+                $"""
+                UPDATE {postgresOptions.TableName} 
+                SET 
+                    status = {JobStatus.Completed}, 
+                    data = @data, 
+                    updated_at = now() 
+                WHERE id = @id
+                """
+            );
+
+            command.Parameters.AddWithValue("data", data);
+            command.Parameters.AddWithValue("id", Guid.Parse(jobId));
+            await command.ExecuteNonQueryAsync(cancellationToken);
+        }
+        else
+        {
+            var command = dataSource.CreateCommand(
+                $"UPDATE {postgresOptions.TableName} SET status = {JobStatus.Completed}, updated_at = now() WHERE id = @id"
+            );
+
+            command.Parameters.AddWithValue("id", Guid.Parse(jobId));
+            await command.ExecuteNonQueryAsync(cancellationToken);
+        }
+    }
+
+    public async Task SetJobAsPending(string jobId, CancellationToken cancellationToken = default)
     {
         var command = dataSource.CreateCommand(
-            $"UPDATE {postgresOptions.TableName} SET status = 5, worker_id = null, updated_at = now() WHERE id = @id"
+            $"""
+            UPDATE {postgresOptions.TableName} 
+            SET 
+                status = {JobStatus.Pending}, 
+                worker_id = null, 
+                data = null, 
+                exception_message = null, 
+                exception_stacktrace = null, 
+                exception_inner_message = null, 
+                exception_inner_stacktrace = null, 
+                updated_at = now() 
+            WHERE id = @id
+            """
         );
         command.Parameters.AddWithValue("id", Guid.Parse(jobId));
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
-    public async Task MarkWorkerProcessingJobsAsStopped(
+    public async Task SetJobAsStopped(string jobId, CancellationToken cancellationToken = default)
+    {
+        var command = dataSource.CreateCommand(
+            $"""
+            UPDATE {postgresOptions.TableName} 
+            SET 
+                status = {JobStatus.Stopped}, 
+                updated_at = now() 
+            WHERE id = @id
+            """
+        );
+        command.Parameters.AddWithValue("id", Guid.Parse(jobId));
+        await command.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    public async Task SetWorkerProcessingJobsAsStopped(
         string workerId,
         CancellationToken cancellationToken = default
     )
     {
         var command = dataSource.CreateCommand(
-            $"UPDATE {postgresOptions.TableName} SET status = 5, worker_id = null, results = null, updated_at = now() WHERE worker_id = @workerId AND status = 2"
+            $"""
+            UPDATE {postgresOptions.TableName} 
+            SET 
+                status = {JobStatus.Stopped}, 
+                updated_at = now() 
+            WHERE worker_id = @workerId AND status = {JobStatus.Processing}
+            """
         );
         command.Parameters.AddWithValue("workerId", workerId);
         await command.ExecuteNonQueryAsync(cancellationToken);

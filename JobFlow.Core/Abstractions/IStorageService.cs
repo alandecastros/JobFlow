@@ -8,55 +8,40 @@ namespace JobFlow.Core.Abstractions;
 public interface IStorageService
 {
     Task<Job?> GetJobAsync(string jobId, CancellationToken cancellationToken = default);
-
-    Task<IList<string>> GetRequestedToStopJobsIdsAsync(
-        CancellationToken cancellationToken = default
-    );
-
+    Task SetJobData(string jobId, string? data, CancellationToken cancellationToken = default);
     Task<string> InsertAsync<T>(
         T request,
         string queue,
         CancellationToken cancellationToken = default
     )
         where T : notnull;
-
-    Task StopJobAsync(string jobId, CancellationToken cancellationToken = default);
-
     Task<long> GetPendingCountAsync(
         string queueName,
         CancellationToken cancellationToken = default
     );
-
     Task<long> GetInProgressCountAsync(
         string queueName,
         string workerId,
         CancellationToken cancellationToken = default
     );
-
     Task<Job?> GetNextJobAsync(
         string queueName,
         string workerId,
         CancellationToken cancellationToken = default
     );
-
-    Task MarkJobAsFailedById(
+    Task SetJobAsFailed(
         string jobId,
-        string errorMessage,
-        Exception? exception = null,
+        Exception exception,
         CancellationToken cancellationToken = default
     );
-
-    Task MarkJobAsCompletedById(
+    Task SetJobAsCompleted(
         string jobId,
-        object? results,
+        string? data,
         CancellationToken cancellationToken = default
     );
-
-    Task MarkJobAsPendingById(string jobId, CancellationToken cancellationToken = default);
-
-    Task MarkJobAsStoppedById(string jobId, CancellationToken cancellationToken = default);
-
-    Task MarkWorkerProcessingJobsAsStopped(
+    Task SetJobAsPending(string jobId, CancellationToken cancellationToken = default);
+    Task SetJobAsStopped(string jobId, CancellationToken cancellationToken = default);
+    Task SetWorkerProcessingJobsAsStopped(
         string workerId,
         CancellationToken cancellationToken = default
     );
