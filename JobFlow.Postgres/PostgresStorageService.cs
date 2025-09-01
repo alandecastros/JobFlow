@@ -28,9 +28,7 @@ public class PostgresStorageService(
                 created_at, 
                 updated_at, 
                 exception_message,
-                exception_stacktrace,
-                exception_inner_message,
-                exception_inner_stacktrace
+                exception_stacktrace
             FROM {postgresOptions.TableName}
             WHERE id = @jobId
             """
@@ -55,8 +53,6 @@ public class PostgresStorageService(
         var updatedAt = reader.GetDateTime(7);
         var exceptionMessage = reader.IsDBNull(8) ? null : reader.GetString(8);
         var exceptionStacktrace = reader.IsDBNull(9) ? null : reader.GetString(9);
-        var exceptionInnerMessage = reader.IsDBNull(10) ? null : reader.GetString(10);
-        var exceptionInnerStacktrace = reader.IsDBNull(11) ? null : reader.GetString(11);
 
         return new Job
         {
@@ -68,8 +64,6 @@ public class PostgresStorageService(
             Data = data,
             ExceptionMessage = exceptionMessage,
             ExceptionStacktrace = exceptionStacktrace,
-            ExceptionInnerMessage = exceptionInnerMessage,
-            ExceptionInnerStacktrace = exceptionInnerStacktrace,
             CreatedAt = createdAt,
             UpdatedAt = updatedAt,
         };
@@ -250,8 +244,6 @@ public class PostgresStorageService(
                 status = {JobStatus.Failed}, 
                 exception_message = @exceptionMessage, 
                 exception_stacktrace = @exceptionStacktrace,
-                exception_inner_message = @exceptionInnerMessage, 
-                exception_inner_stacktrace = @exceptionInnerStacktrace, 
                 updated_at = now() 
             WHERE id = @id
             """
@@ -260,14 +252,6 @@ public class PostgresStorageService(
         command.Parameters.AddWithValue(
             "exceptionStacktrace",
             exception.StackTrace ?? (object)DBNull.Value
-        );
-        command.Parameters.AddWithValue(
-            "exceptionInnerMessage",
-            exception.InnerException?.Message ?? (object)DBNull.Value
-        );
-        command.Parameters.AddWithValue(
-            "exceptionInnerStacktrace",
-            exception.InnerException?.StackTrace ?? (object)DBNull.Value
         );
         command.Parameters.AddWithValue("id", Guid.Parse(jobId));
         await command.ExecuteNonQueryAsync(cancellationToken);
@@ -279,32 +263,20 @@ public class PostgresStorageService(
         CancellationToken cancellationToken = default
     )
     {
-        if (data is not null)
-        {
-            var command = dataSource.CreateCommand(
-                $"""
-                UPDATE {postgresOptions.TableName} 
-                SET 
-                    status = {JobStatus.Completed}, 
-                    data = @data, 
-                    updated_at = now() 
-                WHERE id = @id
-                """
-            );
+        var command = dataSource.CreateCommand(
+            $"""
+            UPDATE {postgresOptions.TableName} 
+            SET 
+                status = {JobStatus.Completed}, 
+                data = @data, 
+                updated_at = now() 
+            WHERE id = @id
+            """
+        );
 
-            command.Parameters.AddWithValue("data", data);
-            command.Parameters.AddWithValue("id", Guid.Parse(jobId));
-            await command.ExecuteNonQueryAsync(cancellationToken);
-        }
-        else
-        {
-            var command = dataSource.CreateCommand(
-                $"UPDATE {postgresOptions.TableName} SET status = {JobStatus.Completed}, updated_at = now() WHERE id = @id"
-            );
-
-            command.Parameters.AddWithValue("id", Guid.Parse(jobId));
-            await command.ExecuteNonQueryAsync(cancellationToken);
-        }
+        command.Parameters.AddWithValue("data", data is not null ? data : DBNull.Value);
+        command.Parameters.AddWithValue("id", Guid.Parse(jobId));
+        await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
     public async Task SetJobAsPending(string jobId, CancellationToken cancellationToken = default)
@@ -317,9 +289,7 @@ public class PostgresStorageService(
                 worker_id = null, 
                 data = null, 
                 exception_message = null, 
-                exception_stacktrace = null, 
-                exception_inner_message = null, 
-                exception_inner_stacktrace = null, 
+                exception_stacktrace = null,
                 updated_at = now() 
             WHERE id = @id
             """

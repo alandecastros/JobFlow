@@ -1,14 +1,19 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using JobFlow.Core;
-using JobFlow.Postgres.Tests.JobHandlers;
+using JobFlow.MongoDb;
+using JobFlow.Tests.JobHandlers;
 using Microsoft.Extensions.Hosting;
 
-namespace JobFlow.Postgres.Tests;
+namespace JobFlow.Tests;
 
-public static class TestHost
+public static class MongoDbHost
 {
-    public static async Task<IHost> CreateAsync(string postgresConnectionString)
+    public static async Task<IHost> CreateAsync(
+        string mongoDbConnectionString,
+        string database,
+        string collection
+    )
     {
         var host = Host.CreateDefaultBuilder()
             .ConfigureServices(
@@ -16,8 +21,13 @@ public static class TestHost
                 {
                     services.AddJobFlow(x =>
                     {
-                        x.UsePostgres(
-                            new PostgresOptions { ConnectionString = postgresConnectionString }
+                        x.UseMongoDb(
+                            new MongoDbOptions
+                            {
+                                ConnectionString = mongoDbConnectionString,
+                                Database = database,
+                                Collection = collection,
+                            }
                         );
 
                         x.Worker = new JobFlowWorkerOptions

@@ -2,7 +2,7 @@
 using System.Threading.Tasks;
 using JobFlow.Core.Abstractions;
 
-namespace JobFlow.Postgres.Tests.JobHandlers;
+namespace JobFlow.Tests.JobHandlers;
 
 public class SimpleJob : IJob
 {

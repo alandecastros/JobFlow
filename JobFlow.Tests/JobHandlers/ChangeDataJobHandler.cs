@@ -2,7 +2,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using JobFlow.Core.Abstractions;
 
-namespace JobFlow.Postgres.Tests.JobHandlers;
+namespace JobFlow.Tests.JobHandlers;
 
 public class ProgressData
 {
@@ -25,6 +25,6 @@ public class ChangeDataJobHandler(IJobQueue jobQueue) : IJobHandler<ChangeDataJo
             cancellationToken
         );
 
-        await Task.Delay(1000, cancellationToken);
+        await Task.Delay(10000, cancellationToken);
     }
 }

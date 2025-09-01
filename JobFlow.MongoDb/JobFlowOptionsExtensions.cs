@@ -12,12 +12,9 @@ namespace JobFlow.MongoDb;
 
 public static class JobFlowOptionsExtensions
 {
-    public static void UseMongoDb(
-        this JobFlowQueueOptions queueOptions,
-        MongoDbOptions mongoDbOptions
-    )
+    public static void UseMongoDb(this JobFlowOptions options, MongoDbOptions mongoDbOptions)
     {
-        queueOptions.Services.TryAddKeyedSingleton<IMongoClient>(
+        options.Services.TryAddKeyedSingleton<IMongoClient>(
             "mongodb-job-queue",
             (_, _) => new MongoClient(mongoDbOptions.ConnectionString)
         );
@@ -31,8 +28,7 @@ public static class JobFlowOptionsExtensions
                 .SetElementName("_id");
         });
 
-        queueOptions.Services.TryAddSingleton(queueOptions);
-        queueOptions.Services.TryAddSingleton(mongoDbOptions);
-        queueOptions.Services.TryAddScoped<IStorageService, MongoDbStorageService>();
+        options.Services.TryAddSingleton(mongoDbOptions);
+        options.Services.TryAddScoped<IStorageService, MongoDbStorageService>();
     }
 }

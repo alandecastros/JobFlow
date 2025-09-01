@@ -1,10 +1,11 @@
 ﻿using System.Threading.Tasks;
+using JobFlow.Core;
 using JobFlow.Core.Abstractions;
-using JobFlow.Postgres.Tests.JobHandlers;
+using JobFlow.Tests.JobHandlers;
 using Microsoft.Extensions.DependencyInjection;
 using Shouldly;
 
-namespace JobFlow.Postgres.Tests;
+namespace JobFlow.Tests.Postgres;
 
 public class JobStoppingTests(SliceFixture fixture)
 {
@@ -14,17 +15,24 @@ public class JobStoppingTests(SliceFixture fixture)
         var scope = fixture.App.Services.CreateScope();
 
         var jobQueue = scope.ServiceProvider.GetRequiredService<IJobQueue>();
+        var jobFlowOptions = scope.ServiceProvider.GetRequiredService<JobFlowOptions>();
 
         var jobId = await jobQueue.SubmitJobAsync(
             new ToBeStoppedJob(),
             ct: TestContext.Current.CancellationToken
         );
 
-        await Task.Delay(5000, TestContext.Current.CancellationToken);
+        await Task.Delay(
+            10 * jobFlowOptions.Worker!.PollingIntervalInMilliseconds!.Value,
+            TestContext.Current.CancellationToken
+        );
 
         await jobQueue.StopJobAsync(jobId, TestContext.Current.CancellationToken);
 
-        await Task.Delay(5000, TestContext.Current.CancellationToken);
+        await Task.Delay(
+            10 * jobFlowOptions.Worker!.PollingIntervalInMilliseconds!.Value,
+            TestContext.Current.CancellationToken
+        );
 
         var job = await jobQueue.GetJobAsync(jobId, TestContext.Current.CancellationToken);
 

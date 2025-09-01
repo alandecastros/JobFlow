@@ -13,8 +13,6 @@ public class Job
     public string? Data { get; set; }
     public string? ExceptionMessage { get; set; }
     public string? ExceptionStacktrace { get; set; }
-    public string? ExceptionInnerMessage { get; set; }
-    public string? ExceptionInnerStacktrace { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }

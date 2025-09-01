@@ -68,23 +68,6 @@ public class MongoDbStorageService : IStorageService
         return job.Id;
     }
 
-    public async Task StopJobAsync(string jobId, CancellationToken cancellationToken = default)
-    {
-        var filter = Builders<Job>.Filter.Eq(j => j.Id, jobId);
-
-        var utcNow = DateTime.UtcNow;
-
-        var update = Builders<Job>
-            .Update.Set(x => x.Status, JobStatus.Stopped)
-            .Set(j => j.UpdatedAt, utcNow);
-
-        await _jobCollection.FindOneAndUpdateAsync(
-            filter,
-            update,
-            cancellationToken: cancellationToken
-        );
-    }
-
     public async Task<long> GetPendingCountAsync(
         string queueName,
         CancellationToken cancellationToken = default

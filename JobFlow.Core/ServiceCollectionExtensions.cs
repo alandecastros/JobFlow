@@ -13,12 +13,14 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddJobFlow(
         this IServiceCollection services,
-        Action<JobFlowQueueOptions> configure
+        Action<JobFlowOptions> configure
     )
     {
         services.AddScoped<IJobQueue, JobQueue>();
-        var options = new JobFlowQueueOptions(services);
+        var options = new JobFlowOptions(services);
         configure(options);
+
+        services.AddSingleton(options);
 
         if (options.Worker is null)
             return services;

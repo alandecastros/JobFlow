@@ -7,7 +7,8 @@ namespace JobFlow.Core;
 
 public class JobQueue(
     IStorageService storageService,
-    IJobCancellationTokenManager jobCancellationTokenManager
+    IJobCancellationTokenManager jobCancellationTokenManager,
+    JobFlowOptions options
 ) : IJobQueue
 {
     public async Task<string> SubmitJobAsync<T>(
@@ -34,16 +35,17 @@ public class JobQueue(
 
     public async Task<bool> RestartJobAsync(string jobId, CancellationToken ct = default)
     {
-        var result = jobCancellationTokenManager.RequestJobCancellation(jobId);
+        jobCancellationTokenManager.RequestJobCancellation(jobId);
 
-        if (!result)
+        while (true)
         {
-            return false;
-        }
+            var job = await storageService.GetJobAsync(jobId, ct);
+            if (job is { Status: JobStatus.Stopped } or { Status: JobStatus.Completed })
+                break;
 
-        while (await storageService.GetJobAsync(jobId, ct) is not { Status: JobStatus.Stopped })
-        {
-            await Task.Delay(1000, ct);
+            var pollingInterval = options.Worker!.PollingIntervalInMilliseconds!.Value * 2;
+
+            await Task.Delay(pollingInterval, ct);
         }
 
         await storageService.SetJobAsPending(jobId, ct);

@@ -1,33 +1,38 @@
 ﻿using System.Threading.Tasks;
+using JobFlow.Core;
 using JobFlow.Core.Abstractions;
-using JobFlow.Postgres.Tests.JobHandlers;
+using JobFlow.Tests.JobHandlers;
 using Microsoft.Extensions.DependencyInjection;
 using Shouldly;
 
-namespace JobFlow.Postgres.Tests;
+namespace JobFlow.Tests.MongoDb;
 
 public class JobDataBeforeCompleteTests(SliceFixture fixture)
 {
     [Fact]
     public async Task Ok()
     {
-        var scope = fixture.App.Services.CreateScope();
+        var scope = fixture.MongoDbApp.Services.CreateScope();
 
         var jobQueue = scope.ServiceProvider.GetRequiredService<IJobQueue>();
+        var jobFlowOptions = scope.ServiceProvider.GetRequiredService<JobFlowOptions>();
 
         var jobId = await jobQueue.SubmitJobAsync(
             new ChangeDataJob(),
             ct: TestContext.Current.CancellationToken
         );
 
-        await Task.Delay(5000, TestContext.Current.CancellationToken);
+        await Task.Delay(
+            5 * jobFlowOptions.Worker!.PollingIntervalInMilliseconds!.Value,
+            TestContext.Current.CancellationToken
+        );
 
         var job = await jobQueue.GetJobAsync<ProgressData>(
             jobId,
             TestContext.Current.CancellationToken
         );
 
-        job!.Status.ShouldBe(JobStatus.Completed);
+        job!.Status.ShouldBe(JobStatus.Processing);
         job.Data!.Progress.ShouldBe(50);
     }
 }

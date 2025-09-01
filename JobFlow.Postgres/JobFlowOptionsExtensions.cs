@@ -6,14 +6,11 @@ using Npgsql;
 
 namespace JobFlow.Postgres;
 
-public static class JobFlowQueueOptionsExtensions
+public static class JobFlowOptionsExtensions
 {
-    public static void UsePostgres(
-        this JobFlowQueueOptions queueOptions,
-        PostgresOptions postgresOptions
-    )
+    public static void UsePostgres(this JobFlowOptions options, PostgresOptions postgresOptions)
     {
-        queueOptions.Services.TryAddKeyedSingleton<NpgsqlDataSource>(
+        options.Services.TryAddKeyedSingleton<NpgsqlDataSource>(
             "postgres-job-queue",
             (_, _) =>
             {
@@ -30,8 +27,6 @@ public static class JobFlowQueueOptionsExtensions
                     	data varchar NULL,
                     	exception_message varchar NULL,
                     	exception_stacktrace varchar NULL,
-                    	exception_inner_message varchar NULL,
-                    	exception_inner_stacktrace varchar NULL,
                     	payload varchar NOT NULL,
                     	payload_type varchar NOT NULL,
                     	created_at timestamptz NOT NULL,
@@ -55,7 +50,7 @@ public static class JobFlowQueueOptionsExtensions
             }
         );
 
-        queueOptions.Services.TryAddSingleton(postgresOptions);
-        queueOptions.Services.TryAddScoped<IStorageService, PostgresStorageService>();
+        options.Services.TryAddSingleton(postgresOptions);
+        options.Services.TryAddScoped<IStorageService, PostgresStorageService>();
     }
 }

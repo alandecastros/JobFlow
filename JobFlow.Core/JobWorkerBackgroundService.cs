@@ -77,23 +77,34 @@ public class JobWorkerBackgroundService(
                         stoppingToken
                     );
 
-                    var data = await jobHandlerCaller.CallHandler(
-                        acquiredJob.Id,
-                        payloadType,
-                        payload,
-                        linkedCts.Token
-                    );
+                    try
+                    {
+                        var data = await jobHandlerCaller.CallHandler(
+                            acquiredJob.Id,
+                            payloadType,
+                            payload,
+                            linkedCts.Token
+                        );
 
-                    var dataSerialized = data is not null
-                        ? JsonSerializerUtils.Serialize(data)
-                        : null;
+                        var dataSerialized = data is not null
+                            ? JsonSerializerUtils.Serialize(data)
+                            : null;
 
-                    await storageService.SetJobAsCompleted(
-                        acquiredJob.Id,
-                        dataSerialized,
-                        // ReSharper disable once PossiblyMistakenUseOfCancellationToken
-                        stoppingToken
-                    );
+                        await storageService.SetJobAsCompleted(
+                            acquiredJob.Id,
+                            dataSerialized,
+                            // ReSharper disable once PossiblyMistakenUseOfCancellationToken
+                            stoppingToken
+                        );
+                    }
+                    catch (Exception e)
+                    {
+                        if (e.InnerException is null)
+                            throw;
+
+                        logger.LogError(e, e.Message);
+                        throw e.InnerException;
+                    }
                 }
                 catch (OperationCanceledException ex)
                 {
