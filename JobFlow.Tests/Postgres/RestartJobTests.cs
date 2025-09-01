@@ -21,7 +21,7 @@ public class RestartJobTests(SliceFixture fixture)
 
         var jobId = await jobQueue.SubmitJobAsync(
             new SimpleJob { Delay = 10 * pollingInterval },
-            ct: TestContext.Current.CancellationToken
+            cancellationToken: TestContext.Current.CancellationToken
         );
 
         await Task.Delay(

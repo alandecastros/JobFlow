@@ -14,52 +14,58 @@ public class JobQueue(
     public async Task<string> SubmitJobAsync<T>(
         T request,
         string? queue = null,
-        CancellationToken ct = default
+        CancellationToken cancellationToken = default
     )
         where T : notnull
     {
         var jobId = await storageService.InsertAsync(
             request,
             queue ?? "default",
-            cancellationToken: ct
+            cancellationToken: cancellationToken
         );
 
         return jobId;
     }
 
-    public Task<bool> StopJobAsync(string jobId, CancellationToken ct = default)
+    public Task<bool> StopJobAsync(string jobId, CancellationToken cancellationToken = default)
     {
         var result = jobCancellationTokenManager.RequestJobCancellation(jobId);
         return Task.FromResult(result);
     }
 
-    public async Task<bool> RestartJobAsync(string jobId, CancellationToken ct = default)
+    public async Task<bool> RestartJobAsync(
+        string jobId,
+        CancellationToken cancellationToken = default
+    )
     {
         jobCancellationTokenManager.RequestJobCancellation(jobId);
 
         while (true)
         {
-            var job = await storageService.GetJobAsync(jobId, ct);
+            var job = await storageService.GetJobAsync(jobId, cancellationToken);
             if (job is { Status: JobStatus.Stopped } or { Status: JobStatus.Completed })
                 break;
 
             var pollingInterval = options.Worker!.PollingIntervalInMilliseconds!.Value * 2;
 
-            await Task.Delay(pollingInterval, ct);
+            await Task.Delay(pollingInterval, cancellationToken);
         }
 
-        await storageService.SetJobAsPending(jobId, ct);
+        await storageService.SetJobAsPending(jobId, cancellationToken);
         return true;
     }
 
-    public Task<Job?> GetJobAsync(string jobId, CancellationToken ct = default)
+    public Task<Job?> GetJobAsync(string jobId, CancellationToken cancellationToken = default)
     {
-        return storageService.GetJobAsync(jobId, ct);
+        return storageService.GetJobAsync(jobId, cancellationToken);
     }
 
-    public async Task<Job<T?>?> GetJobAsync<T>(string jobId, CancellationToken ct = default)
+    public async Task<Job<T?>?> GetJobAsync<T>(
+        string jobId,
+        CancellationToken cancellationToken = default
+    )
     {
-        var job = await storageService.GetJobAsync(jobId, ct);
+        var job = await storageService.GetJobAsync(jobId, cancellationToken);
 
         if (job is null)
         {
@@ -81,9 +87,13 @@ public class JobQueue(
         };
     }
 
-    public async Task SetJobDataAsync(string jobId, object? data, CancellationToken ct = default)
+    public async Task SetJobDataAsync(
+        string jobId,
+        object? data,
+        CancellationToken cancellationToken = default
+    )
     {
         var serializedData = data is not null ? JsonSerializerUtils.Serialize(data) : null;
-        await storageService.SetJobData(jobId, serializedData, ct);
+        await storageService.SetJobData(jobId, serializedData, cancellationToken);
     }
 }

@@ -19,7 +19,7 @@ public class JobDataBeforeCompleteTests(SliceFixture fixture)
 
         var jobId = await jobQueue.SubmitJobAsync(
             new ChangeDataJob(),
-            ct: TestContext.Current.CancellationToken
+            cancellationToken: TestContext.Current.CancellationToken
         );
 
         await Task.Delay(

@@ -19,7 +19,7 @@ public class JobWithoutDataTests(SliceFixture fixture)
 
         var jobId = await jobQueue.SubmitJobAsync(
             new SimpleJob(),
-            ct: TestContext.Current.CancellationToken
+            cancellationToken: TestContext.Current.CancellationToken
         );
 
         await Task.Delay(

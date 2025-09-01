@@ -19,7 +19,7 @@ public class JobFailingTests(SliceFixture fixture)
 
         var jobId = await jobQueue.SubmitJobAsync(
             new ToFailJob(),
-            ct: TestContext.Current.CancellationToken
+            cancellationToken: TestContext.Current.CancellationToken
         );
 
         await Task.Delay(
